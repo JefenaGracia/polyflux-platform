@@ -377,3 +377,17 @@ kbd.tlui-kbd {
 .toggle-expand-button.collapsed {
   transform: rotate(180deg);
 }
+
+.historyItem {
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.historyItem:hover {
+  background: #f5f5f5;
+}
+
+.historyItem--selected {
+  background: #e5f0ff;       
+  border-left: 4px solid #2563eb;
+}

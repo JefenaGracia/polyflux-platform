@@ -9,6 +9,7 @@ const HistoryCommentPanel = ({
   selectedShape,
   isPanelCollapsed,
   togglePanel,
+  onHighlight,
 }) => {
   const [isViewingHistory, setIsViewingHistory] = useState(true);
 
@@ -16,7 +17,22 @@ const HistoryCommentPanel = ({
   //   setIsViewingHistory(!selectedShape); // Show comments if a shape is selected, otherwise show history
   // }, [selectedShape]);
 
+  if (isPanelCollapsed) {
+    return (
+      <div className="panelContainerWrapper">
+        <div className="toggle-expand-container">
+          <button
+            onClick={togglePanel}
+            className="toggle-expand-button collapsed"
+          ></button>
+          <span className="panel-label">History/Comment Panel</span>
+        </div>
+      </div>
+    );
+  }
+  
   return (
+    <div className="panelContainerWrapper">
     <div className="panelContainer">
       {/* Toggle Button positioned at the bottom-left corner of the panel */}
       <button
@@ -33,11 +49,13 @@ const HistoryCommentPanel = ({
       />
 
       {isViewingHistory ? (
-        <HistoryPanel actionHistory={actionHistory} />
+        <HistoryPanel actionHistory={actionHistory} 
+          onHighlight={onHighlight} />
       ) : (
         // <CommentPanel comments={comments[selectedShape?.id] || []} />
         <CommentPanel selectedShape={selectedShape} />
       )}
+    </div>
     </div>
   );
 };

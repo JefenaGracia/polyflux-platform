@@ -43,6 +43,7 @@ import {
   getFirestore,
   doc,
   getDoc,
+  getDocs,
   collection,
   orderBy,
   query,
@@ -66,6 +67,7 @@ import CustomContextMenu from "./components/CustomContextMenu";
 import Navbar from "./components/navbar/Navbar";
 import ContextToolbarComponent from "./components/ContextToolbarComponent";
 import CustomActionsMenu from "./components/CustomActionsMenu";
+import HistoryCommentPanel from "./components/HistoryCommentPanel";
 import VerifyEmail from "./components/VerifyEmail";
 // import ProtectedRoute from "./components/ProtectedRoute";
 import AccountCreatedSuccess from "./components/AccountCreatedSuccess";
@@ -344,11 +346,62 @@ const CollaborativeWhiteboard = () => {
   const [userRole, setUserRole] = useState(null);
   const editorInstance = useRef(null);
 
+  const highlightById = (rawId) => {
+    const editor = editorInstance.current;
+    if (!editor || !rawId) return;
+    let shapeId = String(rawId);
+    let shape = editor.getShape?.(shapeId);
+    if (!shape && !shapeId.startsWith("shape:")) {
+      const altId = `shape:${shapeId}`;
+      const altShape = editor.getShape?.(altId);
+      if (altShape) {
+        shapeId = altId;
+        shape = altShape;
+      }
+    }
+    if (!shape) {
+      console.warn("Shape not found for highlight:", rawId);
+      return;
+    }
+    requestAnimationFrame(() => {
+      editor.selectNone();
+      editor.select(shapeId); 
+    });
+  };
+  const HIGHLIGHT_PREFIX = "shape:__flash_";
+  const lastFlashIdRef = useRef(null);   
+  const cleanupHighlights = (editor) => {
+    if (!editor) return;
+    try {
+      const shapeIds = editor.getCurrentPageShapeIds
+        ? Array.from(editor.getCurrentPageShapeIds())
+        : [];
+
+      const toDelete = shapeIds.filter((id) =>
+        String(id).startsWith(HIGHLIGHT_PREFIX)
+      );
+
+      if (toDelete.length) {
+        if (typeof editor.deleteShapes === "function") {
+          editor.deleteShapes(toDelete);
+        } else {
+          toDelete.forEach((id) => editor.deleteShape?.(id));
+        }
+      }
+
+      lastFlashIdRef.current = null;
+    } catch (e) {
+      console.warn("[cleanupHighlights] failed", e);
+    }
+  };
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [messages, setMessages] = useState([]);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
-
+  const [isHistoryPanelCollapsed, setIsHistoryPanelCollapsed] = useState(true);
+  const toggleHistoryPanel = () =>
+  setIsHistoryPanelCollapsed((prev) => !prev);
   useEffect(() => {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
@@ -401,7 +454,7 @@ const CollaborativeWhiteboard = () => {
 
     try {
       const q = query(historyRef, orderBy("timestamp", "desc"));
-      const querySnapshot = await getDoc(q);
+      const querySnapshot = await getDocs(q);
       const historyLogs = querySnapshot.docs.map((doc) => doc.data());
       // console.log("History Logs ---- \n", historyLogs);
 
@@ -501,6 +554,7 @@ const CollaborativeWhiteboard = () => {
       <Tldraw
         onMount={(editor) => {
           editorInstance.current = editor;
+          window.tldrawEditor = editor;
           if (editorInstance) {
             saveCanvasPreview(); // Save canvas preview on mount
           }
@@ -529,6 +583,7 @@ const CollaborativeWhiteboard = () => {
               setComments={setComments}
               actionHistory={actionHistory}
               setActionHistory={setActionHistory}
+              onHighlight={highlightById} 
             />
           ),
           InFrontOfTheCanvas: (props) => (
@@ -544,6 +599,7 @@ const CollaborativeWhiteboard = () => {
                 addComment={addComment}
                 setActionHistory={setActionHistory}
                 fetchActionHistory={fetchActionHistory}
+                onHighlight={highlightById}  
               />
               {/* {userRole === "teacher" && (
                 <InactivityMonitor
@@ -552,6 +608,14 @@ const CollaborativeWhiteboard = () => {
                   teamName={teamName}
                 />
               )} */}
+              <HistoryCommentPanel
+                actionHistory={actionHistory}
+                comments={comments}
+                selectedShape={selectedShape}
+                isPanelCollapsed={isHistoryPanelCollapsed}
+                togglePanel={toggleHistoryPanel}
+                onHighlight={highlightById}
+              />
             </>
           ),
           // Toolbar: DefaultToolbar,

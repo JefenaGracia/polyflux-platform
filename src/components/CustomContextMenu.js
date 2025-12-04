@@ -32,6 +32,7 @@ export default function CustomContextMenu({
   setComments,
   actionHistory,
   setActionHistory,
+  onHighlight,
   // togglePanel,
   ...props
 }) {
@@ -75,15 +76,19 @@ export default function CustomContextMenu({
         return;
       }
       await registerShape(newShape, userContext);
-
+      const cleanId = String(newShape.id).startsWith("shape:")
+        ? String(newShape.id).slice("shape:".length)
+        : String(newShape.id);
       setActionHistory((prev) => [
         {
           userId,
           action: `added a ${newShape.type}`,
-          shapeId: newShape.id,
+          shapeType: newShape.type,             
+          shapeId: cleanId,
+          targetId: cleanId,
           timestamp: new Date().toLocaleString(),
         },
-        ...prev.filter((entry) => entry.shapeId !== newShape.id),
+          ...prev.filter((entry) => entry.shapeId !== cleanId && entry.targetId !== cleanId),
       ]);
     };
 
@@ -109,11 +114,17 @@ export default function CustomContextMenu({
 
       await deleteShape(deletedShapeID.id, userContext);
 
+      const id = deletedShapeID.id;
+      const cleanId = String(id).startsWith("shape:")
+        ? String(id).slice("shape:".length)
+        : String(id);
       setActionHistory((prev) => [
         {
           userId: auth.currentUser ? auth.currentUser.displayName : "anon",
           action: `deleted`,
           shapeId: deletedShapeID.id,
+          shapeId: cleanId,
+          targetId: cleanId,
           timestamp: new Date().toLocaleString(),
         },
         ...prev,
@@ -205,9 +216,13 @@ export default function CustomContextMenu({
         // ]);
 
         setActionHistory((prev) => {
+          const rawId = liveShape.id;
+          const cleanId = String(rawId).startsWith("shape:")
+            ? String(rawId).slice("shape:".length)
+            : String(rawId);
           const alreadyExists = prev.some(
             (entry) =>
-              entry.shapeId === liveShape.id &&
+              (entry.shapeId === cleanId || entry.targetId === cleanId) &&
               entry.action.startsWith("updated")
           );
           if (alreadyExists) return prev;
@@ -215,7 +230,9 @@ export default function CustomContextMenu({
             {
               userId,
               action: `updated a ${liveShape.type}`,
-              shapeId: liveShape.id,
+              shapeType: liveShape.type,
+              shapeId: cleanId,
+              targetId: cleanId,
               timestamp: new Date().toLocaleString(),
             },
             ...prev,
@@ -432,7 +449,7 @@ export default function CustomContextMenu({
         teamName,
         "shapes"
       );
-
+      console.log("[CustomContextMenu] render — onHighlight type:",typeof onHighlight );
       console.log("📂 Collection reference created:", shapesRef);
       const snapshot = await getDocs(shapesRef);
       console.log("📄 Documents fetched. Count:", snapshot.size);
@@ -604,7 +621,7 @@ export default function CustomContextMenu({
         <DefaultContextMenuContent />
       </DefaultContextMenu>
 
-      <div className="panelContainerWrapper">
+       {/* <div className="panelContainerWrapper">
         {!isPanelCollapsed && (
           <HistoryCommentPanel
             actionHistory={actionHistory}
@@ -620,7 +637,7 @@ export default function CustomContextMenu({
             togglePanel={togglePanel}
           />
         )}
-      </div>
+      </div> */}
     </div>
   );
 }

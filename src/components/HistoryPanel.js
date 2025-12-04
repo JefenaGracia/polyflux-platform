@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import "../App.css";
 
-export default function HistoryPanel({ actionHistory = [] }) {
+export default function HistoryPanel({ actionHistory = [], onHighlight }) {
+  const [selectedIndex, setSelectedIndex] = useState(null);
   return (
     <div className="historyPanel">
       <h4 className="historyTitle">Action History</h4>
@@ -31,11 +32,46 @@ export default function HistoryPanel({ actionHistory = [] }) {
             }
 
             console.log(`--- Formatted Timestamp --- ${formattedTimestamp}`);
+            const rawAction = action.action || "";
+            let actionLabel = rawAction;
+            if (action.shapeType) {
+              const lower = rawAction.toLowerCase();
+              const typeLower = String(action.shapeType).toLowerCase();
+              if (!lower.includes(typeLower)) {
+                actionLabel = `${rawAction} a ${action.shapeType}`;
+              }
+            }
 
             return (
-              <li key={index} className="historyItem">
+              <li
+                key={index}
+                className={`historyItem ${
+                  selectedIndex === index ? "historyItem--selected" : ""
+                }`}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setSelectedIndex(index);
+                  const rawId = action.targetId || action.shapeId;
+                  console.log("[HistoryPanel] clicked action:", action);
+                  console.log("[HistoryPanel] rawId:", rawId);
+                  if (onHighlight && rawId) {
+                    onHighlight(rawId);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setSelectedIndex(index);
+                    const rawId = action.targetId || action.shapeId;
+                    if (onHighlight && rawId) {
+                      onHighlight(rawId);
+                    }
+                  }
+                }}
+              >
                 <strong>{action.userId || "Unknown User"}</strong>{" "}
-                {action.action}
+                {actionLabel}
+                {/* {action.action}
                 {action.shapeType}
                 {/* {action.shapeId} */}
                 <div className="timestamp">{formattedTimestamp}</div>
